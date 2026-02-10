@@ -46,19 +46,21 @@ Vue.component('kanban-column', {
                 deadline: this.newTask.deadline,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                status: 'planned',
-                isOverdue: false
+                status: ['planned', 'in-progress', 'testing', 'completed'][this.columnIndex],
+                isOverdue: false,
+                returnReason: null
             }
             this.$emit('move-task', task, this.columnIndex)
             this.showForm = false
             this.newTask = { title: '', description: '', deadline: null }
         },
-
+        
         moveTask(task, newColumnIndex) {
             this.$emit('move-task', task, newColumnIndex)
         },
         editTask(task) {
-            this.$emit('edit-task', task)
+            // Передаём и задачу, и индекс колонки
+            this.$emit('edit-task', task, this.columnIndex)
         },
         deleteTask(task) {
             this.$emit('delete-task', task)
@@ -68,25 +70,52 @@ Vue.component('kanban-column', {
 
 Vue.component('task-card', {
     template: `
-         <div v-if="!isEditing && !isReturningToWork">
+        <div class="task">
+            <div v-if="!isEditing && !isReturningToWork">
                 <p class="task-title">{{ task.title }}</p>
                 <p class="task-description">{{ task.description }}</p>
                 <p class="task-deadline">Дэдлайн: {{ formattedDate(task.deadline) }}</p>
-                <p class="task-created">Создана: {{ formattedDate(task.created) }}</p>
+                <p class="task-created">Создана: {{ formattedDate(task.createdAt) }}</p>
                 <p class="task-updated">Последнее обновление: {{ formattedDate(task.updatedAt) }}</p>
                 <button @click="startEditing">Редактировать</button>
                 <button @click="deleteTask">Удалить</button>
                 <button v-if="columnIndex !== 3" @click="moveTask(columnIndex + 1)">Переместить вперед</button>
-                <button v-if="columnIndex === 2" @click="moveTask(1)">Вернуть в работу</button>
+                <button v-if="columnIndex === 2" @click="startReturningToWork">Вернуть в работу</button>
+            </div>
+            
+            <div v-else-if="isEditing" class="edit-form">
+                <input v-model="editedTask.title" placeholder="Заголовок задачи">
+                <textarea v-model="editedTask.description" placeholder="Описание задачи"></textarea>
+                <input type="date" v-model="editedTask.deadline">
+                <button @click="saveEditing">Сохранить</button>
+                <button @click="cancelEditing">Отмена</button>
+            </div>
+            
+            <div v-else-if="isReturningToWork" class="return-form">
+                <textarea v-model="returnReason" placeholder="Причина возврата в работу"></textarea>
+                <button @click="confirmReturnToWork">Подтвердить</button>
+                <button @click="cancelReturnToWork">Отмена</button>
             </div>
         </div>
     `,
     props: ['task', 'columnIndex'],
+    data() {
+        return {
+            isEditing: false,
+            isReturningToWork: false,
+            returnReason: '',
+            editedTask: {
+                title: this.task.title,
+                description: this.task.description,
+                deadline: this.task.deadline
+            }
+        }
+    },
     methods: {
         formattedDate(date) {
             return date ? new Intl.DateTimeFormat('ru-RU').format(new Date(date)) : ''
         },
-         startEditing() {
+        startEditing() {
             this.isEditing = true
         },
         saveEditing() {
@@ -159,15 +188,17 @@ let app = new Vue({
                 this.columns[currentColumnIndex].tasks = this.columns[currentColumnIndex].tasks.filter(t => t.id !== task.id)
             }
             task.status = ['planned', 'in-progress', 'testing', 'completed'][newColumnIndex]
-            task.updateAt = new Date()
+            task.updatedAt = new Date()
 
             if (newColumnIndex === 3) {
                 task.isOverdue = task.deadline && new Date(task.deadline) < new Date()
             }
-             // Добавляем причину возврата, если она есть
+            
+            // причина возврата если есть
             if (returnReason) {
                 task.returnReason = returnReason
             }
+            
             this.columns[newColumnIndex].tasks.push(task)
         },
         editTask(updatedTask, columnIndex) {
