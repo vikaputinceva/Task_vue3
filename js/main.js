@@ -73,7 +73,7 @@ Vue.component('task-card', {
                 <p class="task-description">{{ task.description }}</p>
                 <p class="task-deadline">Дэдлайн: {{ formattedDate(task.deadline) }}</p>
                 <p class="task-created">Создана: {{ formattedDate(task.created) }}</p>
-                <p class="task-updated">Последнее обновление{{ formattedDate(task.updatedAt) }}</p>
+                <p class="task-updated">Последнее обновление: {{ formattedDate(task.updatedAt) }}</p>
                 <button @click="startEditing">Редактировать</button>
                 <button @click="deleteTask">Удалить</button>
                 <button v-if="columnIndex !== 3" @click="moveTask(columnIndex + 1)">Переместить вперед</button>
